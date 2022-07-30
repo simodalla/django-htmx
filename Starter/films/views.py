@@ -31,6 +31,6 @@ def check_username(request):
     username = request.POST.get("username")
     if get_user_model().objects.filter(username=username).exists():
         return HttpResponse(
-            '<div id="username-error" style="color: red;">This username already exists</div>'
+            '<div id="username-error" class="error">This username already exists</div>'
         )
-    return HttpResponse('<div id="username-error" style="color: green;">This username is available')
+    return HttpResponse('<div id="username-error" class="success">This username is available')
