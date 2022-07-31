@@ -4,8 +4,10 @@ from django.http.response import HttpResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import FormView, TemplateView
+from django.views.generic.list import ListView
 
-from films.forms import RegisterForm
+from .forms import RegisterForm
+from .models import Film
 
 
 # Create your views here.
@@ -34,3 +36,21 @@ def check_username(request):
             '<div id="username-error" class="error">This username already exists</div>'
         )
     return HttpResponse('<div id="username-error" class="success">This username is available')
+
+
+class FilmList(ListView):
+    model = Film
+    context_object_name = "films"
+    template_name = "films.html"
+
+    def get_queryset(self):
+        user = self.request.user
+        return user.films.all()
+
+
+def add_film(request):
+    name = request.POST.get("filmname")
+    film = Film.objects.create(name=name)
+    request.user.films.add(film)
+    films = request.user.films.all()
+    return render(request, "partials/film-list.html", {"films": films})
