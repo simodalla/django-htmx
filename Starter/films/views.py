@@ -12,7 +12,7 @@ from django.views.generic.list import ListView
 
 from .forms import RegisterForm
 from .models import Film, UserFilms
-from .utils import get_max_order
+from .utils import get_max_order, reorder
 
 
 # Create your views here.
@@ -74,6 +74,7 @@ def add_film(request):
 @require_http_methods(["DELETE"])
 def delete_film(request, pk):
     UserFilms.objects.get(pk=pk).delete()
+    reorder(request.user)
     films = UserFilms.objects.filter(user=request.user)
     return render(request, "partials/film-list.html", {"films": films})
 
