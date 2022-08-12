@@ -11,7 +11,8 @@ from django.views.generic import FormView, TemplateView
 from django.views.generic.list import ListView
 
 from .forms import RegisterForm
-from .models import Film
+from .models import Film, UserFilms
+from .utils import get_max_order
 
 
 # Create your views here.
@@ -48,8 +49,7 @@ class FilmList(LoginRequiredMixin, ListView):
     template_name = "films.html"
 
     def get_queryset(self):
-        user = self.request.user
-        return user.films.all()
+        return UserFilms.objects.filter(user=self.request.user)
 
 
 @login_required
@@ -57,8 +57,15 @@ class FilmList(LoginRequiredMixin, ListView):
 def add_film(request):
     name = request.POST.get("filmname")
     film, _ = Film.objects.get_or_create(name=name)
-    request.user.films.add(film)
-    films = request.user.films.all()
+
+    if not UserFilms.objects.filter(film=film, user=request.user).exists():
+        UserFilms.objects.create(
+            film=film,
+            user=request.user,
+            order=get_max_order(request.user),
+        )
+
+    films = UserFilms.objects.filter(user=request.user)
     messages.success(request, f"Addedd {name} to list of films")
     return render(request, "partials/film-list.html", {"films": films})
 
@@ -66,8 +73,8 @@ def add_film(request):
 @login_required
 @require_http_methods(["DELETE"])
 def delete_film(request, pk):
-    request.user.films.remove(pk)
-    films = request.user.films.all()
+    UserFilms.objects.get(pk=pk).delete()
+    films = UserFilms.objects.filter(user=request.user)
     return render(request, "partials/film-list.html", {"films": films})
 
 
@@ -75,13 +82,24 @@ def delete_film(request, pk):
 @require_http_methods(["POST"])
 def search_film(request):
     search_text = request.POST.get("search")
-    # userfilms =
+    userfilms = UserFilms.objects.filter(user=request.user)
     results = Film.objects.filter(name__icontains=search_text).exclude(
-        name__in=request.user.films.all().values_list("name", flat=True)
+        name__in=userfilms.values_list("film__name", flat=True)
     )
-    print(results)
     return render(request, "partials/search-results.html", {"results": results})
 
 
 def clear(request):
     return HttpResponse("")
+
+
+def sort(request):
+    films_pks_order = request.POST.getlist("film_order")
+    print(films_pks_order)
+    films = []
+    for idx, film_pk in enumerate(films_pks_order, start=1):
+        userfilm = UserFilms.objects.get(pk=film_pk)
+        userfilm.order = idx
+        userfilm.save()
+        films.append(userfilm)
+    return render(request, "partials/film-list.html", {"films": films})
