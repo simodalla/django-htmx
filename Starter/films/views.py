@@ -1,8 +1,12 @@
+from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
-from django.http.response import HttpResponse, HttpResponsePermanentRedirect
+from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.urls import reverse_lazy
+from django.views.decorators.http import require_http_methods
 from django.views.generic import FormView, TemplateView
 from django.views.generic.list import ListView
 
@@ -38,7 +42,7 @@ def check_username(request):
     return HttpResponse('<div id="username-error" class="success">This username is available')
 
 
-class FilmList(ListView):
+class FilmList(LoginRequiredMixin, ListView):
     model = Film
     context_object_name = "films"
     template_name = "films.html"
@@ -48,15 +52,36 @@ class FilmList(ListView):
         return user.films.all()
 
 
+@login_required
+@require_http_methods(["POST"])
 def add_film(request):
     name = request.POST.get("filmname")
-    film = Film.objects.create(name=name)
+    film, _ = Film.objects.get_or_create(name=name)
     request.user.films.add(film)
     films = request.user.films.all()
+    messages.success(request, f"Addedd {name} to list of films")
     return render(request, "partials/film-list.html", {"films": films})
 
 
+@login_required
+@require_http_methods(["DELETE"])
 def delete_film(request, pk):
     request.user.films.remove(pk)
     films = request.user.films.all()
     return render(request, "partials/film-list.html", {"films": films})
+
+
+@login_required
+@require_http_methods(["POST"])
+def search_film(request):
+    search_text = request.POST.get("search")
+    # userfilms =
+    results = Film.objects.filter(name__icontains=search_text).exclude(
+        name__in=request.user.films.all().values_list("name", flat=True)
+    )
+    print(results)
+    return render(request, "partials/search-results.html", {"results": results})
+
+
+def clear(request):
+    return HttpResponse("")
