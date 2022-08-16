@@ -5,3 +5,4 @@ django-widget-tweaks
 black
 flake8
 isort
+pillow
