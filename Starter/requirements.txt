@@ -7,3 +7,4 @@ flake8
 isort
 pillow
 django-htmx
+django-debug-toolbar
