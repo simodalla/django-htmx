@@ -44,12 +44,18 @@ def check_username(request):
 
 
 class FilmList(LoginRequiredMixin, ListView):
-    model = Film
+    model = UserFilms
     context_object_name = "films"
     template_name = "films.html"
+    paginate_by = 20
 
     def get_queryset(self):
         return UserFilms.objects.filter(user=self.request.user)
+
+    def get_template_names(self):
+        if self.request.htmx:
+            return "partials/film-list-elements.html"
+        return super().get_template_names()
 
 
 @login_required
